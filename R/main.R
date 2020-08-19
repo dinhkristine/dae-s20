@@ -184,12 +184,34 @@ ExploreVariable("rain")
 #### Correlation #### 
 
 corr_table <- fire %>% 
-  select(FFMC, DMC, DC, ISI, temp, RH, wind, rain, area) %>% 
+  select(FFMC, DMC, DC, ISI, temp, RH, wind, rain, log_area, hazard) %>% 
   cor()
 
 ggcorrplot(corr_table, hc.order = TRUE, type = "upper",
-           outline.col = "white")
+           outline.col = "white", 
+           colors = c("blue", "white", "red"))
 
 
 #### Model Development ####
+
+fit <- glm(formula = log_area ~ temp,
+           family  = "gaussian",
+           data    = fire)
+
+fire$area_pred <- predict(fit, newdata = fire)
+fire$percentile <- ntile(fire$log_area, 10)
+
+a <- fire %>% 
+  group_by(percentile) %>% 
+  summarise(log_area = mean(log_area), 
+            area_pred = mean(area_pred))
+  
+ggplot(a, aes(x = percentile)) + 
+  geom_line(aes(y = log_area), color = "red") + 
+  geom_line(aes(y = area_pred), color = "blue")
+
+
+
+
+
 
