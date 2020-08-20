@@ -112,15 +112,3 @@ LoopAllVars <- function(rp, nrounds, list_of_xvars, number_of_xvars){
   return(iteration_log)
 }
 
-
-SummaryTable <- function(input){
-  
-  var <- fire[, input][[1]]
-  
-  data.frame(Min = min(var), 
-             "Lower IQR" = quantile(var, .25)[[1]], 
-             Median = median(var), 
-             Mean = mean(var), 
-             "Upper IQR" = quantile(var, .75)[[1]], 
-             Max = max(var))
-}

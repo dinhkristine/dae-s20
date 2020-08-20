@@ -3,7 +3,8 @@
 library(tidyverse)
 library(magrittr)
 library(ggcorrplot)
-
+library(kable)
+library(kableExtra)
 
 #### Functions ####
 
@@ -36,13 +37,15 @@ fire %<>%
 
 fire %<>%
   mutate(large_fire = case_when(area == 0 ~ 0, TRUE ~ 1))
+  
+
 
 fire %<>%
   mutate(FFMC_bin = ntile(FFMC, 10), 
          DMC_bin = ntile(DMC, 10),
          DC_bin = ntile(DC, 10), 
          ISI_bin = ntile(ISI, 10), 
-         temp_bin = ntile(temp, 10), 
+         temp_bin = factor(ntile(temp, 10)), 
          RH_bin = ntile(RH, 10))
 
 fire %<>% mutate(rain = case_when(
@@ -59,11 +62,11 @@ fire %<>%
 
 fire %<>% 
   mutate(Y_flag = case_when(
-    Y %in% c(1,2,3,4) ~ "north", 
-    TRUE ~ "south"), 
+    Y %in% c(1,2,3,4) ~ "North", 
+    TRUE ~ "South"), 
     X_flag = case_when(
-      X %in% seq(1,5) ~ "west",
-      TRUE ~ "east")) %>% 
+      X %in% seq(1,5) ~ "West",
+      TRUE ~ "East")) %>% 
   mutate(location_flag = paste(Y_flag, X_flag, sep = ","))
 
 
@@ -111,44 +114,67 @@ fire %<>%
     month %in% c("jun", "jul", "aug", "sep", "oct") ~ 1, 
     TRUE ~ 0))
 
+fire$fire_season %<>% as.factor()
+
+fire %<>%
+  mutate(hazard_bin = factor(ntile(hazard, 10)))
+
+
 #### Data Exploratory Analysis ####
 
 
 
-ExploreVariable(fire, "X")
-ExploreVariable(fire, "X_flag")
-ExploreVariable(fire, "Y")
-ExploreVariable(fire, "Y_flag")
-ExploreVariable(fire, "location") + theme(axis.text.x = element_text(angle = 90))
-ExploreVariable(fire, "location_flag")
-ExploreVariable(fire, "month")
-ExploreVariable(fire, "fire_season")
+# ExploreVariable(fire, "X")
+ExploreVariable(fire, "X_flag") + labs(x = "Horizontal Cardinal Direction")
+# ExploreVariable(fire, "Y")
+ExploreVariable(fire, "Y_flag") + labs(x = "Vertical Cardinal Direction")
+# ExploreVariable(fire, "location") + theme(axis.text.x = element_text(angle = 90))
+# ExploreVariable(fire, "location_flag", count = FALSE) + 
+#   labs(x = "Ordinal Direction") + 
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+  
+# ExploreVariable(fire, "month")
+ExploreVariable(fire, "fire_season") + 
+  labs(x = "Fire Season")
+
 # ExploreVariable(fire, "day")
-ExploreVariable(fire, "FFMC_bin", count = FALSE)
-ExploreVariable(fire, "FFMC_hazard")
-ExploreVariable(fire, "DMC_bin", count = FALSE)
-ExploreVariable(fire, "DMC_hazard")
-ExploreVariable(fire, "DC_bin", count = FALSE)
-ExploreVariable(fire, "DC_hazard")
-ExploreVariable(fire, "ISI_bin", count = FALSE)
-ExploreVariable(fire, "ISI_hazard")
-ExploreVariable(fire, "hazard")
-ExploreVariable(fire, "temp_bin", count = FALSE)
-ExploreVariable(fire, "RH_bin", count = FALSE)
+# ExploreVariable(fire, "FFMC_bin", count = FALSE)
+# ExploreVariable(fire, "FFMC_hazard")
+# ExploreVariable(fire, "DMC_bin", count = FALSE) + 
+#   labs(x = "DMC")
+# ExploreVariable(fire, "DMC_hazard")
+# ExploreVariable(fire, "DC_bin", count = FALSE) + 
+#   labs(x = "DC")
+# ExploreVariable(fire, "DC_hazard")
+ExploreVariable(fire, "ISI_bin", count = FALSE) +
+  labs(x = "ISI")
+# ExploreVariable(fire, "ISI_hazard")
+# ExploreVariable(fire, "hazard")
+ExploreVariable(fire, "hazard_bin", count = FALSE) + labs(x = "Hazard Level")
+ExploreVariable(fire, "temp_bin", count = FALSE) + labs(x = "temp")
+ExploreVariable(fire, "RH_bin", count = FALSE) + labs(x = "RH")
 ExploreVariable(fire, "wind")
 ExploreVariable(fire, "rain")
-ExploreVariable(fire, "fire_count")
+ExploreVariable(fire, "fire_count", count = FALSE) + labs(x = "Fire Frequency")
 
+
+#### ####
+
+
+fit_DMC <- glm(formula = large_fire ~ DMC, family  = "binomial", data = fire)
+fit_FFMC <- glm(formula = large_fire ~ FFMC, family  = "binomial", data = fire)
+fit_DC <- glm(formula = large_fire ~ DC, family  = "binomial", data = fire)
+fit_ISI <- glm(formula = large_fire ~ ISI_hazard, family  = "binomial", data = fire)
 
 #### Correlation #### 
 
 corr_table <- fire %>%
   as.data.frame() %>% 
-  select(FFMC, DMC, DC, ISI, temp, RH, wind, rain, large_fire) %>% 
+  select(FFMC, DMC, DC, ISI, hazard, temp, RH) %>% 
   cor()
 
-ggcorrplot(corr_table, hc.order = TRUE, type = "upper",
-           outline.col = "white", 
+ggcorrplot(corr_table, hc.order = TRUE, 
+           outline.col = "white",
            colors = c("blue", "white", "red"))
 
 
@@ -190,6 +216,7 @@ test_auc1 <- as.data.frame(pROC::auc(test_roc))
 broom::tidy(fit) %>% 
   cbind(confint(fit))
 
+test_auc1
 
 #### Interaction ####
 
