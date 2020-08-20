@@ -11,9 +11,6 @@ xvars <- c("X_flag", "fire_season", "temp", "RH", "hazard")
 
 bar_color <- "#9aa1d9"
 
-rp_par <- c(0.6, 0.7, 0.8, 0.9)
-
-nrounds <- 5
 
 #### Functions ####
 
@@ -26,7 +23,7 @@ fire <- read_csv("data/dae-2020-fall-data.csv")
 
 fire_nonzero <- fire %>% filter(area != 0) 
 
-fire_nonzero %<>% filter(area < 500)
+# fire_nonzero %<>% filter(area < 500)
 
 fire %<>% 
   group_by(X, Y, month) %>% 
@@ -160,19 +157,7 @@ ggcorrplot(corr_table, hc.order = TRUE, type = "upper",
 
 #### Model Development ####
 
-print_list <- list()
 
-for (n_features in 1:6){
-  results <- LoopAllVars(rp = rp_par,
-                         nrounds = nrounds, 
-                         list_of_xvars = xvars, 
-                         number_of_xvars = n_features)
-  print_list[[n_features]] <- results
-}
-
-iteration_log <- print_list %>% bind_rows()
-
-write.csv(iteration_log, "data/iteration-log.CSV")
 
 
 #### Final Model for Binary #### 
@@ -217,136 +202,6 @@ test_auc
 
 broom::tidy(fit) %>% 
   cbind(confint(fit))
-
-
-#### Model Development for non-zero model ####
-
-
-
-# fire_nonzero %<>% 
-#   group_by(X, Y, month) %>% 
-#   summarise(FFMC = median(FFMC), 
-#             DMC = median(DMC), 
-#             DC = median(DC), 
-#             ISI = median(ISI),
-#             temp = median(temp), 
-#             RH = median(RH), 
-#             wind = median(wind), 
-#             rain = median(rain), 
-#             area = mean(area), 
-#             fire_count = n())
-
-fire_nonzero %<>% 
-  mutate(large_fire = log(area))
-
-fire_nonzero %<>%
-  mutate(FFMC_bin = ntile(FFMC, 10), 
-         DMC_bin = ntile(DMC, 10),
-         DC_bin = ntile(DC, 10), 
-         ISI_bin = ntile(ISI, 10), 
-         temp_bin = ntile(temp, 10), 
-         RH_bin = ntile(RH, 10))
-
-fire_nonzero %<>% mutate(rain = case_when(
-  rain == 0 ~ 0, 
-  TRUE~ 1))
-
-fire_nonzero$month %<>%
-  factor(levels = c("jan", "feb", "mar", "apr", "may", "jun", 
-                    "jul", "aug", "sep", "oct", "nov", "dec"))
-
-# fire_nonzero$day %<>% 
-#   factor(levels = c("sat", "sun", "mon", "tue", "wed", "thu", "fri"))
-
-fire_nonzero %<>% 
-  mutate(location = paste(X, Y, sep = ","))
-
-fire_nonzero %<>% 
-  mutate(Y_flag = case_when(
-    Y %in% c(1,2,3,4) ~ "north", 
-    TRUE ~ "south"), 
-    X_flag = case_when(
-      X %in% seq(1,5) ~ "west",
-      TRUE ~ "east")) %>% 
-  mutate(location_flag = paste(Y_flag, X_flag, sep = ","))
-
-
-## 1 - Low 
-## 2 - Moderate 
-## 3 - High 
-## 4 - Very High 
-## 5 - Extreme
-fire_nonzero %<>% 
-  mutate(
-    FFMC_hazard = case_when(
-      FFMC >= 0 & FFMC < 77 ~ 1, 
-      FFMC >= 77 & FFMC < 85 ~ 2,
-      FFMC >= 85 & FFMC < 89 ~ 3,
-      FFMC >= 89 & FFMC < 92 ~ 4,
-      FFMC >= 92 ~ 5
-    ), 
-    DMC_hazard = case_when(
-      DMC >= 0 & DMC < 22 ~ 1,
-      DMC >= 22 & DMC < 28 ~ 2,
-      DMC >= 28 & DMC < 41 ~ 3,
-      DMC >= 41 & DMC < 61 ~ 4,
-      DMC >= 61 ~ 5
-    ), 
-    DC_hazard = case_when(
-      DC >= 0 & DC < 80 ~ 1,
-      DC >= 80 & DC < 190 ~ 2,
-      DC >= 190 & DC < 300 ~ 3,
-      DC >= 300 & DC < 425 ~ 4,
-      DC >= 425 ~ 5,
-    ), 
-    ISI_hazard = case_when(
-      ISI < 1.5 ~ 1,
-      ISI >= 1.5 & ISI < 4.1 ~ 2,
-      ISI >= 4.1 & ISI < 8.1 ~ 3,
-      ISI >= 8.1 & ISI < 15 ~ 4,
-      ISI >= 15 ~ 5,
-    )
-  )
-
-fire_nonzero$hazard <- select(data.frame(fire_nonzero), contains("_hazard")) %>% rowSums()
-
-fire_nonzero %<>%
-  mutate(fire_season = case_when(
-    month %in% c("jun", "jul", "aug", "sep", "oct") ~ 1, 
-    TRUE ~ 0))
-
-ExploreVariable(fire_nonzero, "X")
-ExploreVariable(fire_nonzero, "X_flag")
-ExploreVariable(fire_nonzero, "Y")
-ExploreVariable(fire_nonzero, "Y_flag")
-ExploreVariable(fire_nonzero, "location") + theme(axis.text.x = element_text(angle = 90))
-ExploreVariable(fire_nonzero, "location_flag")
-ExploreVariable(fire_nonzero, "month")
-ExploreVariable(fire_nonzero, "fire_season")
-ExploreVariable(fire_nonzero, "day")
-ExploreVariable(fire_nonzero, "FFMC_bin", count = FALSE)
-ExploreVariable(fire_nonzero, "FFMC_hazard")
-ExploreVariable(fire_nonzero, "DMC_bin", count = FALSE)
-ExploreVariable(fire_nonzero, "DMC_hazard")
-ExploreVariable(fire_nonzero, "DC_bin", count = FALSE)
-ExploreVariable(fire_nonzero, "DC_hazard")
-ExploreVariable(fire_nonzero, "ISI_bin", count = FALSE)
-ExploreVariable(fire_nonzero, "ISI_hazard")
-ExploreVariable(fire_nonzero, "hazard")
-ExploreVariable(fire_nonzero, "temp_bin", count = FALSE)
-ExploreVariable(fire_nonzero, "RH_bin", count = FALSE)
-ExploreVariable(fire_nonzero, "wind")
-ExploreVariable(fire_nonzero, "rain")
-# ExploreVariable(fire_nonzero, "fire_count")
-
-
-fit <- lm(large_fire ~ ISI_bin, data = fire_nonzero)
-
-summary(fit)
-
-
-
-
 
 
 
