@@ -5,13 +5,6 @@ library(magrittr)
 library(ggcorrplot)
 
 
-#### Parameters ####
-
-xvars <- c("X_flag", "fire_season", "temp", "RH", "hazard")
-
-bar_color <- "#9aa1d9"
-
-
 #### Functions ####
 
 source("R/functions.R")
@@ -21,9 +14,12 @@ source("R/functions.R")
 
 fire <- read_csv("data/dae-2020-fall-data.csv")
 
-fire_nonzero <- fire %>% filter(area != 0) 
+# obs  
 
-# fire_nonzero %<>% filter(area < 500)
+unique_location_time <- fire %>% 
+  group_by(X, Y, month) %>% 
+  tally()
+
 
 fire %<>% 
   group_by(X, Y, month) %>% 
@@ -57,8 +53,6 @@ fire$month %<>%
   factor(levels = c("jan", "feb", "mar", "apr", "may", "jun", 
                     "jul", "aug", "sep", "oct", "nov", "dec"))
 
-# fire$day %<>% 
-#   factor(levels = c("sat", "sun", "mon", "tue", "wed", "thu", "fri"))
 
 fire %<>% 
   mutate(location = paste(X, Y, sep = ","))
@@ -119,6 +113,8 @@ fire %<>%
 
 #### Data Exploratory Analysis ####
 
+
+
 ExploreVariable(fire, "X")
 ExploreVariable(fire, "X_flag")
 ExploreVariable(fire, "Y")
@@ -146,18 +142,14 @@ ExploreVariable(fire, "fire_count")
 
 #### Correlation #### 
 
-corr_table <- fire %>% 
+corr_table <- fire %>%
+  as.data.frame() %>% 
   select(FFMC, DMC, DC, ISI, temp, RH, wind, rain, large_fire) %>% 
   cor()
 
 ggcorrplot(corr_table, hc.order = TRUE, type = "upper",
            outline.col = "white", 
            colors = c("blue", "white", "red"))
-
-
-#### Model Development ####
-
-
 
 
 #### Final Model for Binary #### 
@@ -169,7 +161,6 @@ train_ind <- sample(seq_len(nrow(fire)), size = n)
 train <- fire[train_ind, ]
 
 test <- fire[-train_ind, ]
-
 
 fit <- glm(formula = large_fire ~ hazard + Y_flag,
            family  = "binomial",
@@ -184,9 +175,6 @@ em_pred_df <- test %>%
   summarise(em_prop = mean(large_fire), 
             pred_prop = mean(area_pred))
 
-# em_pred_df %>% 
-#   gather("key", "value", -percentile)
-
 ggplot(em_pred_df, aes(x = percentile)) + 
   geom_line(aes(y = em_prop), color = "red", size = 1) + 
   geom_line(aes(y = pred_prop), color = "blue", size = 1) + 
@@ -194,20 +182,56 @@ ggplot(em_pred_df, aes(x = percentile)) +
   geom_point(aes(y = pred_prop), color = "blue", size = 2) + 
   theme_minimal()
 
-
+aic1 <- fit$aic
 test_roc <- pROC::roc(response = test$large_fire, predictor = test$area_pred)
-test_auc <- as.data.frame(pROC::auc(test_roc))
+test_auc1 <- as.data.frame(pROC::auc(test_roc))
 
-test_auc
 
 broom::tidy(fit) %>% 
   cbind(confint(fit))
 
 
+#### Interaction ####
 
+fit <- glm(formula = large_fire ~ hazard + Y_flag + hazard:Y_flag,
+           family  = "binomial",
+           weights = fire_count,
+           data    = train)
 
+test$area_pred <- predict(fit, newdata = test, type = "response")
+test$percentile <- ntile(test$area_pred, 10)
 
+test_roc <- pROC::roc(response = test$large_fire, predictor = test$area_pred)
+test_auc2 <- as.data.frame(pROC::auc(test_roc))
+aic2 <- fit$aic
 
+test_auc1
+test_auc2
+aic1
+aic2
 
+#### Diagnostic ####
+
+fit <- glm(formula = large_fire ~ hazard + Y_flag,
+           family  = "binomial",
+           weights = fire_count,
+           data    = train)
+
+standard_res <- rstandard(fit, type = "pearson")
+
+plot(standard_res)
+
+car::vif(fit)
+
+car::outlierTest(fit)
+library(broom)
+
+fit_df <- augment(fit) %>% mutate(ID = 1:nrow(.))
+
+ggplot(fit_df, aes(x = ID, y = .std.resid)) + 
+  geom_point(aes(color = factor(large_fire)), alpha = 0.5) + 
+  theme_minimal()
+
+plot(fit, which = 4, id.n = 3)
 
 

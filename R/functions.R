@@ -11,7 +11,7 @@ ExploreVariable <- function(df, xvar, count = TRUE){
   
   if(count == TRUE){
     p <- ggplot(group_df, aes_string(x = xvar, group = 1)) +
-      geom_bar(aes(y = count), stat = "identity", fill = bar_color, col = "dark grey") +
+      geom_bar(aes(y = count), stat = "identity", fill = "#9aa1d9", col = "dark grey") +
       geom_point(aes(y = avg_prop_large_fire * ratio), size = 2, color = "black") + 
       geom_line(aes(y = avg_prop_large_fire * ratio), size = 1, color = "black") +
       scale_y_continuous(sec.axis = sec_axis(~./ratio, name = "Average Proportion of Large Fire"))
