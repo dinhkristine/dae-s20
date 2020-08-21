@@ -1,13 +1,16 @@
 
+xvars <- c("X_flag", "Y_flag", "temp", "fire_season", "hazard")
 
 rp_par <- c(0.6, 0.7, 0.8, 0.9)
 
-nrounds <- 5
+nrounds <- 10
+
+fire <- as.data.frame(fire)
 
 
 print_list <- list()
 
-for (n_features in 1:6){
+for (n_features in 1:5){
   results <- LoopAllVars(rp = rp_par,
                          nrounds = nrounds, 
                          list_of_xvars = xvars, 
