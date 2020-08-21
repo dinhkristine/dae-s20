@@ -170,7 +170,7 @@ fit_ISI <- glm(formula = large_fire ~ ISI_hazard, family  = "binomial", data = f
 
 corr_table <- fire %>%
   as.data.frame() %>% 
-  select(FFMC, DMC, DC, ISI, hazard, temp, RH) %>% 
+  select(FFMC, DMC, DC, ISI, temp, RH) %>% 
   cor()
 
 ggcorrplot(corr_table, hc.order = TRUE, 
