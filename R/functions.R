@@ -1,3 +1,13 @@
+#' Explore variables function, returning plots of variables count and average proportion
+#'
+#' @param df dataframe
+#' @param xvar independent variable 
+#' @param count return histogram of count,default is TRUE
+#'
+#' @return
+#' @export
+#'
+#' @examples
 ExploreVariable <- function(df, xvar, count = TRUE){
   
   fire <- df
@@ -31,6 +41,16 @@ ExploreVariable <- function(df, xvar, count = TRUE){
 }
 
 
+#' Simple binomial regression to run bootstrap for variable selection 
+#'
+#' @param rp random partition 
+#' @param xvars independent variable/s
+#' @param nrounds number of times running the model
+#'
+#' @return
+#' @export
+#'
+#' @examples
 BinaryFit <- function(rp, xvars, nrounds){
   
   # select varaibles
@@ -90,6 +110,17 @@ BinaryFit <- function(rp, xvars, nrounds){
 SafelyBinaryFit <- safely(BinaryFit)
 
 
+#' Function to loop all the models through each variable 
+#'
+#' @param rp 
+#' @param nrounds 
+#' @param list_of_xvars 
+#' @param number_of_xvars 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 LoopAllVars <- function(rp, nrounds, list_of_xvars, number_of_xvars){
   # group variables
   vars <- combn(list_of_xvars, number_of_xvars)
@@ -113,6 +144,14 @@ LoopAllVars <- function(rp, nrounds, list_of_xvars, number_of_xvars){
 }
 
 
+#' Summary statistics of variable 
+#'
+#' @param input variable 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 SummaryTable <- function(input){
   
   var <- fire[, input][[1]]

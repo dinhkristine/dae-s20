@@ -24,7 +24,7 @@ fit <- glm(formula = large_fire ~ hazard + Y_flag,
 # plot(fit, which = 4, id.n = 3)
 
 
-library(car)
+
 
 outlierTest(fit) # Bonferonni p-value for most extreme obs
 
@@ -74,7 +74,7 @@ ggplot(diag, aes(x = Index, y = .hat, color = factor(high_hat))) +
   theme(legend.position = "none")
 
 
-library(MASS)
+
 sresid <- studres(fit)
 hist(sresid, freq=FALSE,
      main="Distribution of Studentized Residuals")
